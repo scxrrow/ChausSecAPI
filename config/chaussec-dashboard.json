@@ -1,0 +1,42 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Trafic HTTP Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "prometheus_http_requests_total", "refId": "A" }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Détections IDS (Suricata)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "targets": [
+        {
+          "query": "alert",
+          "metrics": [{ "type": "count", "id": "1" }],
+          "bucketAggs": [{ "type": "date_histogram", "field": "timestamp", "id": "2", "settings": { "interval": "auto" } }],
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Chaussec - Supervision Système",
+  "version": 1
+}
