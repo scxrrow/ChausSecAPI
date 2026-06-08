@@ -14,3 +14,16 @@ datasources:
     jsonData:
       timeField: "timestamp"
       esVersion: 710
+
+  - name: InfluxDB
+    uid: influxdb
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: chaussec
+      defaultBucket: chaussec_metrics
+      tlsSkipVerify: true
+    secureJsonData:
+      token: chaussec-super-secret-token-2026

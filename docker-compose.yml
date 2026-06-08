@@ -4,7 +4,7 @@ services:
   # ==========================================
   # --- PARTIE SOC (SÉCURITÉ ET LOGS) ---
   # ==========================================
-  
+
   mongodb:
     image: mongo:latest
     container_name: chausec-mongodb
@@ -73,7 +73,7 @@ services:
     image: docker.elastic.co/beats/filebeat:7.12.1
     container_name: chaussec-filebeat
     restart: unless-stopped
-    user: root 
+    user: root
     command: ["--strict.perms=false"]
     volumes:
       - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
@@ -89,6 +89,29 @@ services:
     restart: unless-stopped
     ports:
       - "5010:5010"
+    networks:
+      - chaussec_net
+
+  # ==========================================
+  # --- PARTIE MÉTRIQUES (INFLUXDB) ---
+  # ==========================================
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: chaussec-influxdb
+    restart: unless-stopped
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=chaussec2026!
+      - DOCKER_INFLUXDB_INIT_ORG=chaussec
+      - DOCKER_INFLUXDB_INIT_BUCKET=chaussec_metrics
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=chaussec-super-secret-token-2026
+      - DOCKER_INFLUXDB_INIT_RETENTION=10h
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
     networks:
       - chaussec_net
 
@@ -116,23 +139,76 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Permet l'embedding des panels dans des iframes
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      # Accès anonyme pour les panels embarqués dans le frontend
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     depends_on:
       - prometheus
+      - influxdb
     volumes:
-      # Injection automatique des sources de données
       - ./config/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      # Injection automatique du provider de tableaux de bord
       - ./config/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
-      # Injection automatique du fichier JSON du tableau de bord
       - ./config/chaussec-dashboard.json:/etc/grafana/provisioning/dashboards/chaussec-dashboard.json:ro
     networks:
       - chaussec_net
-    
+
   chaussec-api:
     image: scxrrow/chaussecapi:latest
     container_name: chaussec-api
+    restart: unless-stopped
+    environment:
+      - SERVER_PORT=5050
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=chaussec-super-secret-token-2026
+      - INFLUXDB_ORG=chaussec
+      - INFLUXDB_BUCKET=chaussec_metrics
     ports:
       - "5050:5050"
+    depends_on:
+      - influxdb
+    networks:
+      - chaussec_net
+
+  # LDAP sidecar — partage le réseau de chaussec-api pour que
+  # localhost:389 soit accessible depuis l'API (hardcodé dans SecurityConfig)
+  chaussec-ldap:
+    image: osixia/openldap:latest
+    container_name: chaussec-ldap
+    restart: unless-stopped
+    environment:
+      - LDAP_ORGANISATION=ChausSec
+      - LDAP_DOMAIN=chaussec.org
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_BASE_DN=dc=chaussec,dc=org
+      - LDAP_TLS=false
+    command: --copy-service
+    volumes:
+      - ./config/ldap-init.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/init.ldif:ro
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+    network_mode: "container:chaussec-api"
+    depends_on:
+      - chaussec-api
+
+  # ==========================================
+  # --- FRONTEND SOC ---
+  # ==========================================
+
+  chaussec-frontend:
+    build: 
+      context: scxrrow/chausecui:latest
+      dockerfile: Dockerfile
+      args:
+        - VITE_GRAFANA_URL=http://localhost:3000
+        - VITE_GRAFANA_DASHBOARD_UID=chaussec-soc
+    container_name: chaussec-frontend
+    restart: unless-stopped
+    ports:
+      - "4173:80"
+    depends_on:
+      - chaussec-api
     networks:
       - chaussec_net
 
@@ -144,6 +220,9 @@ volumes:
   mongodb_data:
   opensearch_data:
   suricata_logs:
+  influxdb_data:
+  ldap_data:
+  ldap_config:
 
 networks:
   chaussec_net:

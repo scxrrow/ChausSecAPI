@@ -1,7 +1,12 @@
 global:
-  scrape_interval: 15s # Prometheus va collecter les stats toutes les 15 secondes
+  scrape_interval: 15s
 
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+
+  - job_name: 'chaussec-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['chaussec-api:5050']

@@ -1,4 +1,6 @@
 {
+  "uid": "chaussec-soc",
+  "title": "Chaussec - Supervision Système",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -7,6 +9,7 @@
   "liveNow": false,
   "panels": [
     {
+      "id": 1,
       "type": "timeseries",
       "title": "Trafic HTTP Prometheus",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
@@ -16,6 +19,7 @@
       ]
     },
     {
+      "id": 2,
       "type": "barchart",
       "title": "Détections IDS (Suricata)",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
@@ -28,15 +32,33 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Scans Nmap (10h) — Ports Ouverts",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "influxdb", "uid": "influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"chaussec_metrics\")\n  |> range(start: -10h)\n  |> filter(fn: (r) => r._measurement == \"nmap_scans\")\n  |> filter(fn: (r) => r._field == \"open_ports_count\")\n  |> keep(columns: [\"_time\", \"_value\", \"target_ip\", \"status\"])"
+        }
+      ]
     }
   ],
   "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [],
-  "time": { "from": "now-15m", "to": "now" },
+  "tags": ["soc", "chaussec"],
+  "time": { "from": "now-10h", "to": "now" },
   "timepicker": {},
-  "timezone": "",
-  "title": "Chaussec - Supervision Système",
-  "version": 1
+  "timezone": "browser",
+  "version": 2
 }
