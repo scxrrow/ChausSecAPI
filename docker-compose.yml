@@ -83,6 +83,15 @@ services:
     networks:
       - chaussec_net
 
+  requincable:
+    image: scxrrow/chaussecrequin:latest
+    container_name: chaussec-requincable
+    restart: unless-stopped
+    ports:
+      - "5010:5010"
+    networks:
+      - chaussec_net
+
   # ==========================================
   # --- PARTIE SUPERVISION ET DASHBOARDS ---
   # ==========================================
@@ -120,7 +129,7 @@ services:
       - chaussec_net
     
   chaussec-api:
-    image: scxrrow/backend:latest
+    image: scxrrow/chaussecapi:latest
     container_name: chaussec-api
     ports:
       - "5050:5050"
