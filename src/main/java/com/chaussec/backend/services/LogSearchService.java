@@ -15,7 +15,7 @@ public class LogSearchService {
     public String getLatestSuricataAlerts() {
         RestTemplate restTemplate = new RestTemplate();
         
-        // 1. On construit la requête pour OpenSearch/Elasticsearch
+        // 1. On construit la requête pour opensearch
         // Exemple : Chercher les logs où "event_type" est "alert"
         String queryUrl = searchEngineUrl + "/suricata-logs/_search?q=event_type:alert&size=50&sort=@timestamp:desc";
 

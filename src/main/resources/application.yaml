@@ -6,3 +6,5 @@ spring:
     token: chaussec-super-secret-token-2026
     org: chaussec
     bucket: chaussec_metrics
+  opensearch:
+    url: http://chaussec-opensearch:9200
