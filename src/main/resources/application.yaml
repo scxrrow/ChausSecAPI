@@ -1,3 +1,8 @@
 spring:
   application:
     name: backend
+  influx:
+    url: http://chaussec-influxdb:8086
+    token: chaussec-super-secret-token-2026
+    org: chaussec
+    bucket: chaussec_metrics
