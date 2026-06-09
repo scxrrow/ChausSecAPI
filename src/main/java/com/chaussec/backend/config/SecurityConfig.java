@@ -30,8 +30,8 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable()) // Utile pour tester avec Postman au début
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/nmap/**").hasRole("ADMIN") // Seul l'admin lance les scans
-                .requestMatchers("/api/stats/**").hasAnyRole("ADMIN", "USER") // Lecture pour tous
+                .requestMatchers("/chaussec/nmap/**").hasRole("ADMIN") // Seul l'admin lance les scans
+                .requestMatchers("/chaussec/api/stats/**").hasAnyRole("ADMIN", "USER") // Lecture pour tous
                 .anyRequest().authenticated()
             )
             .httpBasic(Customizer.withDefaults()); // Utilise l'authentification basique HTTP pour l'instant
