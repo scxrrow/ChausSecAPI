@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==========================================
   # --- PARTIE SOC (SÉCURITÉ ET LOGS) ---
@@ -165,10 +163,17 @@ services:
       - INFLUXDB_ORG=chaussec
       - INFLUXDB_BUCKET=chaussec_metrics
       - OPENSEARCH_URL=http://opensearch:9200
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_URI=http://influxdb:8086
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_API_VERSION=v2
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_ORG=chaussec
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_BUCKET=chaussec_metrics
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_TOKEN=chaussec-super-secret-token-2026
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_AUTO_CREATE_DB=false
     ports:
       - "5050:5050"
     depends_on:
       - influxdb
+      - opensearch
     networks:
       - chaussec_net
 
