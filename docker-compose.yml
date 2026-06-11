@@ -189,6 +189,10 @@ services:
       - MANAGEMENT_INFLUX_METRICS_EXPORT_BUCKET=chaussec_metrics
       - MANAGEMENT_INFLUX_METRICS_EXPORT_TOKEN=chaussec-super-secret-token-2026
       - MANAGEMENT_INFLUX_METRICS_EXPORT_AUTO_CREATE_DB=false
+      - LDAP_URL=ldap://chaussec-ldap:389   
+      - LDAP_BASE_DN=dc=chaussec,dc=eu 
+      - LDAP_ADMIN_DN=cn=admin,dc=chaussec,dc=eu
+      - LDAP_ADMIN_PASSWORD=Chaussec2026!
     ports:
       - "5050:5050"
     depends_on:
@@ -197,17 +201,15 @@ services:
     networks:
       - chaussec_net
 
-  # LDAP sidecar — partage le réseau de chaussec-api pour que
-  # localhost:389 soit accessible depuis l'API (hardcodé dans SecurityConfig)
   chaussec-ldap:
     image: osixia/openldap:latest
     container_name: chaussec-ldap
     restart: unless-stopped
     environment:
       - LDAP_ORGANISATION=ChausSec
-      - LDAP_DOMAIN=chaussec.org
-      - LDAP_ADMIN_PASSWORD=adminpassword
-      - LDAP_BASE_DN=dc=chaussec,dc=org
+      - LDAP_DOMAIN=chaussec.eu
+      - LDAP_ADMIN_PASSWORD=Chaussec2026!
+      - LDAP_BASE_DN=dc=chaussec,dc=eu
       - LDAP_TLS=false
     command: --copy-service
     volumes:

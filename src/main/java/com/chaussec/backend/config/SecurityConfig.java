@@ -1,5 +1,6 @@
 package com.chaussec.backend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -13,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.ldap.DefaultSpringSecurityContextSource;
 import org.springframework.security.ldap.authentication.BindAuthenticator;
 import org.springframework.security.ldap.authentication.LdapAuthenticationProvider;
-import org.springframework.security.ldap.search.FilterBasedLdapUserSearch;
 import org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopulator;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
@@ -22,9 +22,18 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // ==========================================
-    // 1. LES RÈGLES D'ACCÈS (Qui peut faire quoi)
-    // ==========================================
+    @Value("${spring.ldap.urls}")
+    private String ldapUrls;
+
+    @Value("${spring.ldap.base}")
+    private String ldapBaseDn;
+
+    @Value("${spring.ldap.username}")
+    private String ldapUsername;
+
+    @Value("${spring.ldap.password}")
+    private String ldapPassword;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -58,27 +67,22 @@ public class SecurityConfig {
     // ==========================================
     @Bean
     public LdapAuthenticationProvider ldapAuthenticationProvider() {
-        // A. Connexion au serveur LDAP (à adapter selon votre Docker Compose)
+        // On remplace les chaînes de caractères par nos variables
         DefaultSpringSecurityContextSource contextSource = 
-            new DefaultSpringSecurityContextSource("ldap://localhost:389/dc=chaussec,dc=org");
-        contextSource.setUserDn("cn=admin,dc=chaussec,dc=org"); // Compte pour lire le LDAP
-        contextSource.setPassword("adminpassword");
+            new DefaultSpringSecurityContextSource(ldapUrls + "/" + ldapBaseDn);
+        
+        contextSource.setUserDn(ldapUsername); 
+        contextSource.setPassword(ldapPassword);
         contextSource.afterPropertiesSet();
 
-        // B. Comment trouver l'utilisateur qui essaie de se connecter
-        // Ici, on cherche dans l'unité d'organisation (ou) "people" par son "uid"
-        FilterBasedLdapUserSearch userSearch = 
-            new FilterBasedLdapUserSearch("ou=people", "(uid={0})", contextSource);
-
         BindAuthenticator authenticator = new BindAuthenticator(contextSource);
-        authenticator.setUserSearch(userSearch);
+        authenticator.setUserDnPatterns(new String[] {"uid={0},ou=users", "cn={0},ou=users"});
 
-        // C. Récupération des rôles (Groupes LDAP)
-        DefaultLdapAuthoritiesPopulator authoritiesPopulator = 
+        DefaultLdapAuthoritiesPopulator authorities = 
             new DefaultLdapAuthoritiesPopulator(contextSource, "ou=groups");
-        authoritiesPopulator.setGroupRoleAttribute("cn"); // Le nom du groupe devient le rôle
+        authorities.setGroupRoleAttribute("cn"); 
 
-        return new LdapAuthenticationProvider(authenticator, authoritiesPopulator);
+        return new LdapAuthenticationProvider(authenticator, authorities);
     }
 
     // ==========================================
