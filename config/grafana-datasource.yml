@@ -13,7 +13,7 @@ datasources:
     database: "graylog_*"
     jsonData:
       timeField: "timestamp"
-      esVersion: 710
+      esVersion: 7100
 
   - name: InfluxDB
     uid: influxdb

@@ -14,6 +14,12 @@ services:
       - mongodb_data:/data/db
     ports:
       - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - chaussec_net
 
@@ -31,6 +37,12 @@ services:
       - opensearch_data:/usr/share/opensearch/data
     ports:
       - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE 'green|yellow'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     networks:
       - chaussec_net
 
@@ -48,9 +60,18 @@ services:
       - "9000:9000"
       - "1514:1514/udp"
       - "5044:5044/tcp"
+      - "12201:12201/udp"
     depends_on:
-      - mongodb
-      - opensearch
+      mongodb:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9000/api/system/lbstatus | grep -q ALIVE"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
     networks:
       - chaussec_net
 
@@ -67,17 +88,16 @@ services:
     volumes:
       - suricata_logs:/var/log/suricata
 
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:7.12.1
-    container_name: chaussec-filebeat
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: chaussec-fluent-bit
     restart: unless-stopped
-    user: root
-    command: ["--strict.perms=false"]
     volumes:
-      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - suricata_logs:/var/log/suricata:ro
     depends_on:
-      - graylog
+      graylog:
+        condition: service_healthy
     networks:
       - chaussec_net
 
