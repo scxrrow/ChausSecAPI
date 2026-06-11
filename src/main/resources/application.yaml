@@ -1,10 +1,12 @@
 spring:
   application:
     name: backend
-  influx:
-    url: http://chaussec-influxdb:8086
-    token: chaussec-super-secret-token-2026
-    org: chaussec
-    bucket: chaussec_metrics
-  opensearch:
-    url: http://chaussec-opensearch:9200
+
+influxdb:
+  url: ${INFLUXDB_URL:http://influxdb:8086}
+  token: ${INFLUXDB_TOKEN:chaussec-super-secret-token-2026}
+  org: ${INFLUXDB_ORG:chaussec}
+  bucket: ${INFLUXDB_BUCKET:chaussec_metrics}
+
+opensearch:
+  url: ${OPENSEARCH_URL:http://opensearch:9200}

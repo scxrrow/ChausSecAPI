@@ -164,6 +164,7 @@ services:
       - INFLUXDB_TOKEN=chaussec-super-secret-token-2026
       - INFLUXDB_ORG=chaussec
       - INFLUXDB_BUCKET=chaussec_metrics
+      - OPENSEARCH_URL=http://opensearch:9200
     ports:
       - "5050:5050"
     depends_on:
