@@ -197,16 +197,14 @@ services:
   # ==========================================
 
   chaussec-frontend:
-    build: 
-      context: scxrrow/chausecui:latest
-      dockerfile: Dockerfile
-      args:
-        - VITE_GRAFANA_URL=http://localhost:3000
-        - VITE_GRAFANA_DASHBOARD_UID=chaussec-soc
+    image: scxrrow/chaussecui:latest
     container_name: chaussec-frontend
     restart: unless-stopped
     ports:
       - "4173:80"
+    environment: 
+      - VITE_GRAFANA_URL=http://localhost:3000
+      - VITE_GRAFANA_DASHBOARD_UID=chaussec-soc
     depends_on:
       - chaussec-api
     networks:
