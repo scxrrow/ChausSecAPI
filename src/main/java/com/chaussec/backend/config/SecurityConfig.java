@@ -45,13 +45,14 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            
-            // Indispensable pour JWT : Ne plus garder l'état de l'utilisateur en mémoire serveur
+
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login").permitAll() // Tout le monde peut essayer de se connecter
-                .requestMatchers("/api/nmap/**").hasRole("ADMIN")
+                .requestMatchers("/chaussec/cki/**").permitAll()
+                .requestMatchers("/chaussec/nmap/**").hasRole("ADMIN")
+                .requestMatchers("/chaussec/alerts/**").hasRole("ADMIN")
+                .requestMatchers("/chaussec/requin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             
