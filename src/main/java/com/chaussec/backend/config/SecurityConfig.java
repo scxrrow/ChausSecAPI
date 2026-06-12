@@ -6,11 +6,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -30,7 +34,6 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Correspond aux env vars docker-compose : LDAP_URL, LDAP_BASE_DN, LDAP_ADMIN_DN, LDAP_ADMIN_PASSWORD
     @Value("${ldap.url:ldap://localhost:389}")
     private String ldapUrl;
 
@@ -50,7 +53,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .httpBasic(basic -> basic.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) -> res.sendError(401, "Non autorisé"))
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/chaussec/cki/**").permitAll()
                 .requestMatchers("/chaussec/nmap/**").hasRole("ADMIN")
@@ -65,15 +72,30 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager() {
-        // LDAP en premier, fallback sur superadmin in-memory
         DaoAuthenticationProvider daoProvider = new DaoAuthenticationProvider(inMemoryUserDetailsManager());
         daoProvider.setPasswordEncoder(passwordEncoder());
 
         try {
             LdapAuthenticationProvider ldapProvider = buildLdapProvider();
-            return new ProviderManager(List.of(ldapProvider, daoProvider));
+            // Enveloppe le provider LDAP pour permettre le fallback in-memory
+            // si LDAP est inaccessible au moment de la requête
+            AuthenticationProvider safeLdapProvider = new AuthenticationProvider() {
+                @Override
+                public Authentication authenticate(Authentication auth) throws AuthenticationException {
+                    try {
+                        return ldapProvider.authenticate(auth);
+                    } catch (InternalAuthenticationServiceException e) {
+                        return null; // LDAP injoignable → on laisse le DAO provider prendre la main
+                    }
+                }
+
+                @Override
+                public boolean supports(Class<?> authClass) {
+                    return ldapProvider.supports(authClass);
+                }
+            };
+            return new ProviderManager(List.of(safeLdapProvider, daoProvider));
         } catch (Exception e) {
-            // LDAP indisponible au démarrage → in-memory uniquement
             return new ProviderManager(List.of(daoProvider));
         }
     }
