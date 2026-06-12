@@ -4,11 +4,10 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,27 +20,29 @@ import com.chaussec.backend.security.JwtService;
 public class AuthController {
 
     @Autowired
-    private AuthenticationManager authenticationManager;
+    private UserDetailsService userDetailsService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtService jwtService;
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticate(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        String password = request.get("password");
+
         try {
-            String username = request.get("username");
-            String password = request.get("password");
-
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password)
-            );
-
-            UserDetails user = (UserDetails) authentication.getPrincipal();
-            String jwtToken = jwtService.generateToken(user);
-
-            return ResponseEntity.ok(Map.of("token", jwtToken));
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(401).body(Map.of("error", "Identifiants invalides"));
+            UserDetails user = userDetailsService.loadUserByUsername(username);
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                String token = jwtService.generateToken(user);
+                return ResponseEntity.ok(Map.of("token", token));
+            }
+        } catch (UsernameNotFoundException ignored) {
+            // utilisateur inexistant → réponse identique pour éviter l'énumération
         }
+
+        return ResponseEntity.status(401).body(Map.of("error", "Identifiants invalides"));
     }
 }
