@@ -173,6 +173,7 @@ services:
       - chaussec_net
 
   chaussec-api:
+    build: .
     image: scxrrow/chaussecapi:latest
     container_name: chaussec-api
     restart: unless-stopped
