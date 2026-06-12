@@ -55,8 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/chaussec/requin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            
-            // On supprime .httpBasic() et on ajoute notre filtre JWT avant le filtre standard de Spring
+
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

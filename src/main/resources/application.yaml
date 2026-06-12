@@ -12,7 +12,7 @@ spring:
     name: backend
   ldap:
     urls: ${LDAP_URL:ldap://localhost:389}
-    base: ${LDAP_BASE_DN:dc=chaussec,dc=org}
-    username: ${LDAP_ADMIN_DN:cn=admin,dc=chaussec,dc=org}
+    base: ${LDAP_BASE_DN:dc=chaussec,dc=eu}
+    username: ${LDAP_ADMIN_DN:cn=admin,dc=chaussec,dc=eu}
     password: ${LDAP_ADMIN_PASSWORD:adminpassword}
   
