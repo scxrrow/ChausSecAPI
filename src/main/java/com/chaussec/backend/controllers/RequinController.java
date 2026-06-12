@@ -5,10 +5,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/requin")
+@RequestMapping("/chaussec")
 public class RequinController {
     
-    @GetMapping()
+    @GetMapping("/requin")
     public String getRequin(){
         return "Requin";
     }

@@ -1,11 +1,12 @@
 package com.chaussec.backend.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -17,6 +18,9 @@ import org.springframework.security.ldap.authentication.LdapAuthenticationProvid
 import org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopulator;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.chaussec.backend.security.JwtAuthFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -34,23 +38,29 @@ public class SecurityConfig {
     @Value("${spring.ldap.password}")
     private String ldapPassword;
 
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Utile pour tester avec Postman au début
+            .csrf(csrf -> csrf.disable())
+            
+            // Indispensable pour JWT : Ne plus garder l'état de l'utilisateur en mémoire serveur
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/chaussec/nmap/**").hasRole("ADMIN") // Seul l'admin lance les scans
-                .requestMatchers("/chaussec/api/stats/**").hasAnyRole("ADMIN", "USER") // Lecture pour tous
+                .requestMatchers("/api/auth/login").permitAll() // Tout le monde peut essayer de se connecter
+                .requestMatchers("/api/nmap/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
-            .httpBasic(Customizer.withDefaults()); // Utilise l'authentification basique HTTP pour l'instant
+            
+            // On supprime .httpBasic() et on ajoute notre filtre JWT avant le filtre standard de Spring
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // ==========================================
-    // 2. LE SUPER-ADMIN (En Mémoire locale)
-    // ==========================================
     @Bean
     public UserDetailsService inMemoryUserDetailsManager() {
         UserDetails superAdmin = User.builder()
@@ -62,9 +72,7 @@ public class SecurityConfig {
         return new InMemoryUserDetailsManager(superAdmin);
     }
 
-    // ==========================================
-    // 3. LES UTILISATEURS LDAP (Le reste de l'équipe)
-    // ==========================================
+
     @Bean
     public LdapAuthenticationProvider ldapAuthenticationProvider() {
         // On remplace les chaînes de caractères par nos variables
@@ -85,9 +93,6 @@ public class SecurityConfig {
         return new LdapAuthenticationProvider(authenticator, authorities);
     }
 
-    // ==========================================
-    // 4. L'ENCODEUR DE MOT DE PASSE
-    // ==========================================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
