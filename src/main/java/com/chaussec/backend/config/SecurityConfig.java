@@ -1,6 +1,7 @@
 package com.chaussec.backend.config;
 
-import com.chaussec.backend.security.JwtAuthFilter;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +20,7 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.util.List;
+import com.chaussec.backend.security.JwtAuthFilter;
 
 @Configuration
 @EnableWebSecurity

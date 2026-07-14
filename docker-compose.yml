@@ -4,7 +4,7 @@ services:
   # ==========================================
 
   mongodb:
-    image: mongo:latest
+    image: mongo:4.4
     container_name: chausec-mongodb
     restart: unless-stopped
     environment:
