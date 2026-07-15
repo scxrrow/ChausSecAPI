@@ -23,7 +23,7 @@
       "type": "barchart",
       "title": "Détections IDS (Suricata)",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "PAE1B8C8635429669" },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "opensearch-ds" },
       "targets": [
         {
           "query": "event_type:alert",
@@ -51,6 +51,167 @@
           "query": "from(bucket: \"chaussec_metrics\")\n  |> range(start: -10h)\n  |> filter(fn: (r) => r._measurement == \"nmap_scans\")\n  |> filter(fn: (r) => r._field == \"open_ports_count\")\n  |> keep(columns: [\"_time\", \"_value\", \"target_ip\", \"status\"])"
         }
       ]
+    },
+    {
+      "id": 4,
+      "type": "gauge",
+      "title": "CPU Hôte",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "gauge",
+      "title": "RAM Hôte",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "gauge",
+      "title": "Disque Hôte (/)",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\",fstype!=\"rootfs\"} / node_filesystem_size_bytes{mountpoint=\"/\",fstype!=\"rootfs\"}) * 100)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Top IP sources d'alertes",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "opensearch-ds" },
+      "targets": [
+        {
+          "query": "event_type:alert",
+          "metrics": [{ "type": "count", "id": "1" }],
+          "bucketAggs": [{ "type": "terms", "field": "src_ip", "id": "2", "settings": { "size": "10", "order": "desc", "orderBy": "_count" } }],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Top signatures déclenchées",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "opensearch-ds" },
+      "targets": [
+        {
+          "query": "event_type:alert",
+          "metrics": [{ "type": "count", "id": "1" }],
+          "bucketAggs": [{ "type": "terms", "field": "alert_signature", "id": "2", "settings": { "size": "10", "order": "desc", "orderBy": "_count" } }],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "barchart",
+      "title": "Alertes par sévérité dans le temps (1=haute, 2=moyenne, 3=basse)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "opensearch-ds" },
+      "targets": [
+        {
+          "query": "event_type:alert",
+          "metrics": [{ "type": "count", "id": "1" }],
+          "bucketAggs": [
+            { "type": "terms", "field": "alert_severity", "id": "3", "settings": { "size": "10", "order": "desc", "orderBy": "_count" } },
+            { "type": "date_histogram", "field": "timestamp", "id": "2", "settings": { "interval": "auto" } }
+          ],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Santé Suricata — Paquets capturés / perdus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "datasource": { "type": "grafana-opensearch-datasource", "uid": "opensearch-ds" },
+      "targets": [
+        {
+          "query": "event_type:stats",
+          "metrics": [
+            { "type": "max", "field": "stats_capture_kernel_packets", "id": "1" },
+            { "type": "max", "field": "stats_capture_kernel_drops", "id": "3" }
+          ],
+          "bucketAggs": [{ "type": "date_histogram", "field": "timestamp", "id": "2", "settings": { "interval": "auto" } }],
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Conteneurs ChausSec — CPU (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"chaussec.*\"}[1m])) by (name) * 100",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ]
     }
   ],
   "refresh": "5s",
@@ -60,5 +221,5 @@
   "time": { "from": "now-10h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "version": 2
+  "version": 3
 }
