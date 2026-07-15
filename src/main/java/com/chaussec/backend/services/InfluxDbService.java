@@ -1,5 +1,6 @@
 package com.chaussec.backend.services;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,17 +35,20 @@ public class InfluxDbService {
 
         WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
 
-        Point point = Point.measurement("nmap_scans")
+        Instant start = Instant.parse(result.getTimestamps().getStart());
+        Instant end = Instant.parse(result.getTimestamps().getEnd());
+        long durationMs = Duration.between(start, end).toMillis();
+        int portCount = result.getPorts() != null ? result.getPorts().size() : 0;
 
+        Point point = Point.measurement("nmap_scans")
                 .addTag("target_ip", result.getTarget())
                 .addTag("status", result.getStatus())
-
-                .addField("open_ports_count", result.getOpenPorts() != null ? result.getOpenPorts().size() : 0)
-
-                .time(Instant.now(), WritePrecision.NS);
+                .addField("open_ports_count", portCount)
+                .addField("duration_ms", durationMs)
+                .time(start, WritePrecision.NS);
 
         writeApi.writePoint(point);
-        
+
         System.out.println("Métriques Nmap envoyées à InfluxDB pour l'IP : " + result.getTarget());
     }
 
@@ -55,8 +59,9 @@ public class InfluxDbService {
         String fluxQuery = String.format(
             "from(bucket:\"%s\") " +
             "|> range(start: -24h) " +
-            "|> filter(fn: (r) => r._measurement == \"nmap_scans\")", 
-            bucket 
+            "|> filter(fn: (r) => r._measurement == \"nmap_scans\") " +
+            "|> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")",
+            bucket
         );
 
         List<FluxTable> tables = queryApi.query(fluxQuery, org);
@@ -65,22 +70,31 @@ public class InfluxDbService {
             for (FluxRecord fluxRecord : fluxTable.getRecords()) {
                 ScanMetricDTO dto = new ScanMetricDTO();
 
-                dto.setScanTime(fluxRecord.getTime());
+                Instant startTime = fluxRecord.getTime();
+                dto.setStartTime(startTime != null ? startTime.toString() : null);
 
-                if (fluxRecord.getValueByKey("target_ip") != null) {
-                    dto.setTargetIp(fluxRecord.getValueByKey("target_ip").toString());
-                }
-                if (fluxRecord.getValueByKey("status") != null) {
-                    dto.setStatus(fluxRecord.getValueByKey("status").toString());
+                Object targetIp = fluxRecord.getValueByKey("target_ip");
+                dto.setTarget(targetIp != null ? targetIp.toString() : null);
+
+                Object status = fluxRecord.getValueByKey("status");
+                dto.setStatus(status != null ? status.toString() : null);
+
+                Object openPortsCount = fluxRecord.getValueByKey("open_ports_count");
+                int portCount = openPortsCount != null ? ((Number) openPortsCount).intValue() : 0;
+                dto.setPortCount(portCount);
+
+                Object durationMsValue = fluxRecord.getValueByKey("duration_ms");
+                if (startTime != null && durationMsValue != null) {
+                    long durationMs = ((Number) durationMsValue).longValue();
+                    dto.setEndTime(startTime.plusMillis(durationMs).toString());
                 }
 
-                if ("open_ports_count".equals(fluxRecord.getField())) {
-                    dto.setOpenPortsCount(((Long) fluxRecord.getValue()).intValue());
-                }               
+                dto.setId((startTime != null ? startTime.toEpochMilli() : 0) + "-" + dto.getTarget());
+
                 results.add(dto);
             }
         }
-        
+
         return results;
     }
 }
