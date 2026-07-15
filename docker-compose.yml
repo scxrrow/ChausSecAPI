@@ -94,6 +94,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./config/parsers.conf:/fluent-bit/etc/parsers.conf:ro
       - suricata_logs:/var/log/suricata:ro
     depends_on:
       graylog:
