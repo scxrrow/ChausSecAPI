@@ -6,6 +6,10 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
 
+  # Ancienne entree : le plugin "elasticsearch" classique n'existe plus dans
+  # cette version de Grafana (voir GF_INSTALL_PLUGINS), laissee telle quelle
+  # pour ne pas risquer un conflit de provisioning sur une datasource deja
+  # existante. La nouvelle entree "OpenSearch" ci-dessous la remplace.
   - name: elasticsearch
     type: elasticsearch
     access: proxy
@@ -14,6 +18,18 @@ datasources:
     jsonData:
       timeField: "timestamp"
       esVersion: 7100
+
+  - name: OpenSearch
+    uid: opensearch-ds
+    type: grafana-opensearch-datasource
+    access: proxy
+    url: http://opensearch:9200
+    jsonData:
+      database: "graylog_*"
+      timeField: "timestamp"
+      version: "2.11.0"
+      flavor: "opensearch"
+      maxConcurrentShardRequests: 5
 
   - name: InfluxDB
     uid: influxdb
