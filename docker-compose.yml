@@ -105,8 +105,8 @@ services:
     image: scxrrow/chaussecrequin:latest
     container_name: chaussec-requincable
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:5010:5010"
+    # Pas de port expose : c'est un sniffer Scapy qui ecrit des evenements JSON
+    # sur sa sortie standard (docker logs), il n'expose aucun serveur HTTP.
     networks:
       - chaussec_net
 
