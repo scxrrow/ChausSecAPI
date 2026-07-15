@@ -40,6 +40,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/chaussec/cki/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                 .requestMatchers("/chaussec/nmap/**").hasRole("ADMIN")
                 .requestMatchers("/chaussec/alerts/**").hasRole("ADMIN")
