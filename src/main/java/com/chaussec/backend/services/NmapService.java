@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
@@ -23,6 +25,8 @@ import com.chaussec.backend.models.NmapModel;
 
 @Service
 public class NmapService {
+
+    private static final Logger log = LoggerFactory.getLogger(NmapService.class);
 
     private static final Pattern SAFE_TARGET = Pattern.compile(
         "^(\\d{1,3}\\.){3}\\d{1,3}(/\\d{1,2})?$|^[a-zA-Z0-9][a-zA-Z0-9.-]{0,253}$"
@@ -42,6 +46,20 @@ public class NmapService {
         ProcessBuilder pb = new ProcessBuilder("nmap", "-sV", "-oX", "-", target);
         Process process = pb.start();
 
+        StringBuilder errorOutput = new StringBuilder();
+        Thread stderrDrain = new Thread(() -> {
+            try (BufferedReader errReader = new BufferedReader(
+                    new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                String errLine;
+                while ((errLine = errReader.readLine()) != null) {
+                    errorOutput.append(errLine).append('\n');
+                }
+            } catch (IOException ignored) {
+                // le process est termine, plus rien a lire
+            }
+        });
+        stderrDrain.start();
+
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
         StringBuilder output = new StringBuilder();
@@ -50,18 +68,34 @@ public class NmapService {
             output.append(line).append('\n');
         }
 
+        int exitCode;
+        try {
+            exitCode = process.waitFor();
+            stderrDrain.join(5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            exitCode = -1;
+        }
+
         Instant end = Instant.now();
 
         NmapModel result = new NmapModel();
         result.setTarget(target);
         result.setTimestamps(new NmapModel.Timestamps(start.toString(), end.toString()));
 
-        try {
-            parseNmapXml(output.toString(), result);
-            result.setStatus("Success");
-        } catch (Exception parseError) {
+        if (exitCode != 0) {
+            log.warn("nmap a échoué (exit={}) pour la cible {} : {}", exitCode, target, errorOutput);
             result.setPorts(new ArrayList<>());
-            result.setStatus("Success");
+            result.setStatus("Failed");
+        } else {
+            try {
+                parseNmapXml(output.toString(), result);
+                result.setStatus("Success");
+            } catch (Exception parseError) {
+                log.error("Échec du parsing XML nmap pour la cible {}", target, parseError);
+                result.setPorts(new ArrayList<>());
+                result.setStatus("Failed");
+            }
         }
 
         influxDbService.saveNmapMetrics(result);
@@ -70,9 +104,9 @@ public class NmapService {
 
     private void parseNmapXml(String xml, NmapModel result) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        trySetFeature(factory, "http://apache.org/xml/features/disallow-doctype-decl", true);
+        trySetFeature(factory, "http://xml.org/sax/features/external-general-entities", false);
+        trySetFeature(factory, "http://xml.org/sax/features/external-parameter-entities", false);
         factory.setXIncludeAware(false);
         factory.setExpandEntityReferences(false);
 
@@ -105,5 +139,13 @@ public class NmapService {
         Element child = (Element) children.item(0);
         String value = child.getAttribute(attribute);
         return value.isEmpty() ? null : value;
+    }
+
+    private void trySetFeature(DocumentBuilderFactory factory, String feature, boolean value) {
+        try {
+            factory.setFeature(feature, value);
+        } catch (Exception unsupported) {
+            log.debug("Fonctionnalité XML non supportée par ce parseur : {}", feature);
+        }
     }
 }
