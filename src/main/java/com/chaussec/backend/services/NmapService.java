@@ -103,10 +103,13 @@ public class NmapService {
     }
 
     private void parseNmapXml(String xml, NmapModel result) throws Exception {
+        // Nmap's own XML output legitimately includes a <!DOCTYPE nmaprun> declaration,
+        // so we can't disallow DOCTYPE outright - instead we block external entity
+        // resolution, which is what actually prevents XXE/SSRF via this parser.
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        trySetFeature(factory, "http://apache.org/xml/features/disallow-doctype-decl", true);
         trySetFeature(factory, "http://xml.org/sax/features/external-general-entities", false);
         trySetFeature(factory, "http://xml.org/sax/features/external-parameter-entities", false);
+        trySetFeature(factory, "http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
         factory.setXIncludeAware(false);
         factory.setExpandEntityReferences(false);
 
