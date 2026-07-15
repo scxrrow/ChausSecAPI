@@ -29,10 +29,11 @@ public class NmapController {
     public ResponseEntity<NmapModel> startScan(@RequestParam String target) {
         try {
             NmapModel result = nmapService.executeScan(target);
-            influxService.saveNmapMetrics(result);
-            return ResponseEntity.ok(result); 
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).build();
         } catch (IOException e) {
-            return ResponseEntity.status(500).build(); 
+            return ResponseEntity.status(500).build();
         }
     }
 

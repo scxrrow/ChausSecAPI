@@ -4,18 +4,18 @@ services:
   # ==========================================
 
   mongodb:
-    image: mongo:4.4
+    image: mongo:7.0
     container_name: chausec-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: superAdmin
-      MONGO_INITDB_ROOT_PASSWORD: Chaussec.123
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
     volumes:
       - mongodb_data:/data/db
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +36,7 @@ services:
     volumes:
       - opensearch_data:/usr/share/opensearch/data
     ports:
-      - "9200:9200"
+      - "127.0.0.1:9200:9200"
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE 'green|yellow'"]
       interval: 15s
@@ -51,16 +51,16 @@ services:
     container_name: chaussec-graylog
     restart: unless-stopped
     environment:
-      - GRAYLOG_PASSWORD_SECRET=UnSecretVraimentTresLongPourChaussec2026!
-      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_PASSWORD_SECRET=${GRAYLOG_PASSWORD_SECRET}
+      - GRAYLOG_ROOT_PASSWORD_SHA2=${GRAYLOG_ROOT_PASSWORD_SHA2}
       - GRAYLOG_HTTP_EXTERNAL_URI=http://127.0.0.1:9000/
       - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
-      - GRAYLOG_MONGODB_URI=mongodb://superAdmin:Chaussec.123@mongodb:27017/graylog?authSource=admin
+      - GRAYLOG_MONGODB_URI=mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/graylog?authSource=admin
     ports:
-      - "9000:9000"
-      - "1514:1514/udp"
-      - "5044:5044/tcp"
-      - "12201:12201/udp"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:1514:1514/udp"
+      - "127.0.0.1:5044:5044/tcp"
+      - "127.0.0.1:12201:12201/udp"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -84,7 +84,7 @@ services:
     container_name: chaussec-suricata
     restart: unless-stopped
     network_mode: host
-    command: -i eth0
+    command: -i ${SURICATA_IFACE:-eth0}
     volumes:
       - suricata_logs:/var/log/suricata
 
@@ -106,7 +106,7 @@ services:
     container_name: chaussec-requincable
     restart: unless-stopped
     ports:
-      - "5010:5010"
+      - "127.0.0.1:5010:5010"
     networks:
       - chaussec_net
 
@@ -120,14 +120,14 @@ services:
     restart: unless-stopped
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=chaussec2026!
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_ADMIN_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
       - DOCKER_INFLUXDB_INIT_ORG=chaussec
       - DOCKER_INFLUXDB_INIT_BUCKET=chaussec_metrics
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=chaussec-super-secret-token-2026
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_ADMIN_TOKEN}
       - DOCKER_INFLUXDB_INIT_RETENTION=10h
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     volumes:
       - influxdb_data:/var/lib/influxdb2
     networks:
@@ -142,7 +142,7 @@ services:
     container_name: chaussec-prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
@@ -153,10 +153,10 @@ services:
     container_name: chaussec-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       # Permet l'embedding des panels dans des iframes
       - GF_SECURITY_ALLOW_EMBEDDING=true
       # Accès anonyme pour les panels embarqués dans le frontend
@@ -183,7 +183,7 @@ services:
     environment:
       - SERVER_PORT=5050
       - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=chaussec-super-secret-token-2026
+      - INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN}
       - INFLUXDB_ORG=chaussec
       - INFLUXDB_BUCKET=chaussec_metrics
       - OPENSEARCH_URL=http://opensearch:9200
@@ -191,15 +191,15 @@ services:
       - MANAGEMENT_INFLUX_METRICS_EXPORT_API_VERSION=v2
       - MANAGEMENT_INFLUX_METRICS_EXPORT_ORG=chaussec
       - MANAGEMENT_INFLUX_METRICS_EXPORT_BUCKET=chaussec_metrics
-      - MANAGEMENT_INFLUX_METRICS_EXPORT_TOKEN=chaussec-super-secret-token-2026
+      - MANAGEMENT_INFLUX_METRICS_EXPORT_TOKEN=${INFLUXDB_ADMIN_TOKEN}
       - MANAGEMENT_INFLUX_METRICS_EXPORT_AUTO_CREATE_DB=false
       - LDAP_URL=ldap://localhost:389
       - LDAP_BASE_DN=dc=chaussec,dc=eu
       - LDAP_ADMIN_DN=cn=admin,dc=chaussec,dc=eu
-      - LDAP_ADMIN_PASSWORD=Chaussec2026!
-      - JWT_SECRET=UnSecretJWTVraimentTresLongPourChaussec2026!
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
-      - "5050:5050"
+      - "127.0.0.1:5050:5050"
     depends_on:
       - influxdb
       - opensearch
@@ -213,7 +213,7 @@ services:
     environment:
       - LDAP_ORGANISATION=ChausSec
       - LDAP_DOMAIN=chaussec.eu
-      - LDAP_ADMIN_PASSWORD=Chaussec2026!
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
       - LDAP_BASE_DN=dc=chaussec,dc=eu
       - LDAP_TLS=false
     command: --copy-service
@@ -235,7 +235,7 @@ services:
     restart: unless-stopped
     ports:
       - "4173:80"
-    environment: 
+    environment:
       - VITE_GRAFANA_URL=http://localhost:3000
       - VITE_GRAFANA_DASHBOARD_UID=chaussec-soc
     depends_on:

@@ -3,6 +3,7 @@ package com.chaussec.backend.services;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,10 +13,17 @@ import com.chaussec.backend.models.NmapModel;
 @Service
 public class NmapService {
 
+    private static final Pattern SAFE_TARGET = Pattern.compile(
+        "^(\\d{1,3}\\.){3}\\d{1,3}(/\\d{1,2})?$|^[a-zA-Z0-9][a-zA-Z0-9.-]{0,253}$"
+    );
+
     @Autowired
     private InfluxDbService influxDbService;
-    
+
     public NmapModel executeScan(String target) throws IOException {
+        if (target == null || !SAFE_TARGET.matcher(target).matches()) {
+            throw new IllegalArgumentException("Cible invalide : " + target);
+        }
         // Commande : nmap -sV -oX - (le "-" envoie le XML dans la console)
         ProcessBuilder pb = new ProcessBuilder("nmap", "-sV", "-oX", "-", target);
         Process process = pb.start();
