@@ -162,6 +162,9 @@ services:
       # Accès anonyme pour les panels embarqués dans le frontend
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      # Servi derrière le proxy nginx du frontend sous /grafana
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
     depends_on:
       - prometheus
       - influxdb
