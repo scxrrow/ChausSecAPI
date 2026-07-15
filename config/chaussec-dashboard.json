@@ -13,7 +13,7 @@
       "type": "timeseries",
       "title": "Trafic HTTP Prometheus",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "targets": [
         { "expr": "prometheus_http_requests_total", "refId": "A" }
       ]
@@ -23,10 +23,10 @@
       "type": "barchart",
       "title": "Détections IDS (Suricata)",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "elasticsearch", "uid": "elasticsearch" },
+      "datasource": { "type": "elasticsearch", "uid": "PAE1B8C8635429669" },
       "targets": [
         {
-          "query": "alert",
+          "query": "event_type:alert",
           "metrics": [{ "type": "count", "id": "1" }],
           "bucketAggs": [{ "type": "date_histogram", "field": "timestamp", "id": "2", "settings": { "interval": "auto" } }],
           "refId": "A"
